@@ -25,12 +25,26 @@ type (
 	infixParseFn  func(ast.Expression) ast.Expression
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS      // ==
+	LESSGREATER // > or <
+	SUM         // +
+	PRODUCT     // *
+	PREFIX      // -x or !x
+	CALL        // myFunction(x)
+)
+
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{l: l, errors: []string{}}
 
 	// Read two tokens; populate cur and peek
 	p.nextToken()
 	p.nextToken()
+
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseIdentifier)
 
 	return p
 }
@@ -69,15 +83,15 @@ func (p *Parser) ParseProgram() *ast.Program {
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.LET:
-		return p.ParseLetStatement()
+		return p.parseLetStatement()
 	case token.RETURN:
-		return p.ParseReturnStatement()
+		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
-func (p *Parser) ParseLetStatement() *ast.LetStatement {
+func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt := &ast.LetStatement{Token: p.curToken}
 
 	if !p.expectPeek(token.IDENT) {
@@ -98,7 +112,7 @@ func (p *Parser) ParseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
-func (p *Parser) ParseReturnStatement() *ast.ReturnStatement {
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 
 	p.nextToken()
@@ -109,6 +123,32 @@ func (p *Parser) ParseReturnStatement() *ast.ReturnStatement {
 	}
 
 	return stmt
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.curToken}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+
+	return leftExp
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
 
 func (p *Parser) curTokenIs(t token.TokenType) bool {
