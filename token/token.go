@@ -23,7 +23,7 @@ const (
 	ASTERISK = "*"
 	SLASH    = "/"
 
-	EQ = "=="
+	EQ     = "=="
 	NOT_EQ = "!="
 
 	LT = "<"
@@ -46,15 +46,16 @@ const (
 	IF       = "IF"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
+	STRING   = "STRING"
 )
 
 var keywords = map[string]TokenType{
-	"fn":  FUNCTION,
-	"let": LET,
-	"true": TRUE,
-	"false": FALSE,
-	"if": IF,
-	"else": ELSE,
+	"fn":     FUNCTION,
+	"let":    LET,
+	"true":   TRUE,
+	"false":  FALSE,
+	"if":     IF,
+	"else":   ELSE,
 	"return": RETURN,
 }
 
